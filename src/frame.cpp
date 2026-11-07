@@ -25,6 +25,7 @@ std::string hex_byte(std::uint8_t value) {
 }
 std::optional<std::uint64_t> parse_unsigned(const std::string& text, int base) noexcept {
   const auto cleaned = trim(text);
+  if (base != 0 && (base < 2 || base > 36)) return std::nullopt;
   if (cleaned.empty() || cleaned[0] == '-' || cleaned[0] == '+') return std::nullopt;
   try {
     std::size_t pos = 0;
