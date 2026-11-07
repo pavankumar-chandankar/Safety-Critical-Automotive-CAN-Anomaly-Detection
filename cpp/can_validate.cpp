@@ -46,6 +46,7 @@ static void validate_row(const std::string& line) {
     std::vector<std::string> fields;
     std::string token;
     while (std::getline(input, token, ',')) fields.push_back(trim(token));
+    if (!line.empty() && line.back() == ',') fields.emplace_back("");
     if (fields.size() != 4) throw std::invalid_argument("expected four CSV fields");
     parse_decimal(fields[0], 1000000000UL); // timestamp in milliseconds
     parse_hex(fields[1], 0x7FFUL);           // 11-bit standard CAN ID
