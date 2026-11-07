@@ -1,0 +1,14 @@
+build/
+build-*/
+artifacts/
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+__pycache__/
+.pytest_cache/
+*.pyc
+*.log
+*.out
+*.sarif
+.DS_Store

@@ -1,0 +1,89 @@
+name: CAN Sentinel C++17 engineering verification
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-test:
+    name: ${{ matrix.compiler }} strict build + CTest
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [g++, clang++]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=Debug -DCANSEC_WARNINGS_AS_ERRORS=ON
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Native + CLI + seeded detection campaign
+        run: ctest --test-dir build --output-on-failure
+      - name: Benchmark smoke (synthetic only)
+        run: ./build/cansec_bench 10000
+  sanitizers:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure AddressSanitizer and UBSan
+        run: cmake -S . -B build-sanitized -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug -DCANSEC_ENABLE_SANITIZERS=ON
+      - name: Build
+        run: cmake --build build-sanitized --parallel 2
+      - name: Native C++ sanitizer run
+        run: ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 ./build-sanitized/cansec_tests
+      - name: CLI regression under sanitizers
+        run: ASAN_OPTIONS=detect_leaks=1:halt_on_error=1 UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 python3 tests/test_cli.py ./build-sanitized/cansec
+  static-analysis:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clang Static Analyzer production warning gate
+        run: python3 scripts/check_production_sast.py --clang clang++
+      - name: Check analyzer sensitivity on quarantined faulty source
+        run: python3 scripts/check_seeded_defects.py
+      - name: Install clang-tidy and cppcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang-tidy cppcheck
+      - name: Clang-tidy diagnostics (artifact; non-blocking in this initial baseline)
+        run: |
+          cmake -S . -B build-tidy -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          mkdir -p artifacts
+          (for file in src/*.cpp app/*.cpp; do clang-tidy -p build-tidy "$file" --quiet; done) > artifacts/clang-tidy.txt 2>&1 || true
+      - name: Cppcheck quality gate
+        run: cppcheck --std=c++17 --language=c++ --enable=warning,performance,portability --error-exitcode=1 --quiet -Iinclude src app
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clang-tidy-diagnostics
+          path: artifacts/clang-tidy.txt
+  coverage:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install gcovr
+        run: python3 -m pip install --break-system-packages gcovr
+      - name: Coverage C++17 build
+        run: |
+          cmake -S . -B build-coverage -DCMAKE_BUILD_TYPE=Debug -DCANSEC_ENABLE_COVERAGE=ON
+          cmake --build build-coverage --parallel 2
+          ctest --test-dir build-coverage --output-on-failure
+          mkdir -p artifacts
+          gcovr --root . --filter 'src/' --xml -o artifacts/coverage.xml build-coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cpp-coverage-xml
+          path: artifacts/coverage.xml
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Release build + install staging
+        run: |
+          cmake -S . -B build-release -DCMAKE_BUILD_TYPE=Release -DCANSEC_BUILD_TESTS=OFF
+          cmake --build build-release --parallel 2
+          cmake --install build-release --prefix staging
+          test -x staging/bin/cansec
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-amd64-cansec-release
+          path: staging/bin/cansec

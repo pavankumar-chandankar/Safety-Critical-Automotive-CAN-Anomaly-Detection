@@ -1,0 +1,5 @@
+# Example ECU rules for fully synthetic demonstration traces; NOT OEM-proprietary thresholds.
+id,format,bus,min_period_us,max_period_us,max_bytes,allow_fd,counter_byte,counter_mask,checksum_byte
+0x120,std,0,8000,12000,8,0,0,0x0F,7
+0x220,std,0,18000,22000,8,0,-,-,-
+0x18DAF110,ext,1,9000,11000,12,1,-,-,-

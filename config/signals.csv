@@ -1,0 +1,7 @@
+# DBC-inspired illustrative signal dictionary; supports Intel and Motorola, not complete DBC parsing.
+id,format,name,start_bit,length,endian,signed,factor,offset,min,max
+0x120,std,rolling_counter,0,4,intel,0,1,0,0,15
+0x120,std,engine_rpm,8,16,intel,0,0.25,0,0,9000
+0x120,std,coolant_celsius,31,8,motorola,1,1,-40,-40,215
+0x220,std,vehicle_speed_kph,0,16,intel,0,0.01,0,0,260
+0x18DAF110,ext,torque_nm,0,16,intel,1,0.5,0,-2000,2000

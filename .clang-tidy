@@ -1,0 +1,9 @@
+Checks: '-*,clang-analyzer-*,bugprone-*,cert-*,cppcoreguidelines-pro-bounds-*,misc-*,performance-*,portability-*'
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(.*[/\\])?(include/cansec|src|app)/.*'
+FormatStyle: none
+CheckOptions:
+  - key: bugprone-easily-swappable-parameters.MinimumLength
+    value: '5'
+  - key: misc-include-cleaner.DeduplicateFindings
+    value: 'true'

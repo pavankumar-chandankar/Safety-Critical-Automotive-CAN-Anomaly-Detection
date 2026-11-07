@@ -1,0 +1,20 @@
+name: Clang libFuzzer bounded parser smoke
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 4 * * 0'
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure LLVM fuzz harnesses
+        run: cmake -S . -B build-fuzz -DCMAKE_CXX_COMPILER=clang++ -DCANSEC_BUILD_FUZZERS=ON -DCANSEC_BUILD_TESTS=OFF
+      - name: Build
+        run: cmake --build build-fuzz --parallel 2
+      - name: Exercise parsers (seeded, bounded budgets)
+        run: |
+          ./build-fuzz/fuzz_trace -seed=42 -runs=2000
+          ./build-fuzz/fuzz_candump -seed=42 -runs=2000

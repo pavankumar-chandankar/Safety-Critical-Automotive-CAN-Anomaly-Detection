@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {"major": 3, "minor": 21, "patch": 0},
+  "configurePresets": [
+    {"name": "debug", "generator": "Ninja", "binaryDir": "${sourceDir}/build", "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug"}},
+    {"name": "release", "generator": "Ninja", "binaryDir": "${sourceDir}/build-release", "cacheVariables": {"CMAKE_BUILD_TYPE": "Release", "CANSEC_BUILD_TESTS": "OFF"}},
+    {"name": "sanitized", "generator": "Ninja", "binaryDir": "${sourceDir}/build-sanitized", "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug", "CANSEC_ENABLE_SANITIZERS": "ON"}},
+    {"name": "coverage", "generator": "Ninja", "binaryDir": "${sourceDir}/build-coverage", "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug", "CANSEC_ENABLE_COVERAGE": "ON"}}
+  ]
+}
