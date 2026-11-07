@@ -1,81 +1,39 @@
-# Safety-Critical-Automotive-CAN-Anomaly-Detection
+# Automotive CAN — offline C++17 frame validation prototype
 
-## Abstract
+This repository now contains a small, **synthetic-data-only** classic CAN frame validator intended to demonstrate C++ input validation, regression fixtures, and a Clang Static Analyzer workflow. It is **not** a production automotive safety mechanism, a bus sniffer, an anomaly-detection classifier, or an integration with Vector CANoe/dSPACE.
 
-This project presents a study on forecasting hourly public transport demand using the Prophet model. The study utilizes a dataset of hourly passenger counts for various transport modes in an urban environment. Feature engineering techniques are employed to enhance the dataset, and the Prophet model is trained to predict future demand. A comprehensive evaluation is conducted, including a range of metrics, visualizations, and statistical tests, to assess the model's performance and identify areas for potential improvement.
+## Reproducible C++ validator
 
-## 1. Introduction
+```bash
+g++ -std=c++17 -Wall -Wextra -Werror cpp/can_validate.cpp -o can_validate
+./can_validate examples/standard_frames.csv
+python3 -m unittest discover -s tests -v
+clang++ --analyze -std=c++17 -Wall -Wextra cpp/can_validate.cpp
+```
 
-Accurate forecasting of public transport demand is crucial for efficient resource allocation, route optimization, and service planning. This study focuses on developing a predictive model using the Prophet model, a powerful time series forecasting tool developed by Facebook. The model's ability to handle seasonality and trend makes it well-suited for this task.
+Input: four CSV columns, with no header: `timestamp_ms,can_id_hex,dlc,payload_bytes_hex_spaced`. For example:
 
-## 2. Data and Methodology
+```csv
+100,0x123,2,AA BB
+101,0x3F0,1,7F
+102,0x7FF,0,
+```
 
-### 2.1 Data Acquisition
+The validator checks that timestamps are nonnegative decimal integers within a documented prototype range, identifiers are at most 11 bits, classic CAN DLC is 0–8, payload tokens are bytes, and payload byte count equals DLC. A nonzero exit code indicates rejected rows; diagnostics include source line numbers.
 
-The study utilizes the "Hourly Public Transport Demand" dataset sourced from Kaggle. This dataset comprises hourly passenger counts for different transport modes (bus, tram, subway) within an urban area.
+**Automated checks:** `tests/test_can_validate.py` contains deterministic valid/invalid fixtures. `.github/workflows/can-validation.yml` runs tests and Clang's `--analyze` stage in GitHub Actions. CI execution status must be checked separately; a workflow file alone is not evidence of a passing build.
 
-### 2.2 Feature Engineering
+## Legacy Python experiments (separate project, not CAN validation)
 
-To enhance the dataset and improve the model's predictive capabilities, several feature engineering techniques are employed:
+The pre-existing `Anomaly_Detection/` directory contains experimental Python data-processing, Prophet forecasting and Isolation Forest snippets involving public-transport demand and a UCI car-evaluation dataset. These files are **not a CAN-message processing implementation**. They have not been repurposed or represented as automotive test coverage. Some scripts are incomplete/inconsistent and should be treated as legacy exploratory code.
 
-* **Time-based features:** Hour of the day, day of the week, and month are extracted from the datetime index to capture temporal patterns.
-* **Lag features:** Previous hourly and daily passenger counts are included to capture temporal dependencies.
-* **Scaling:** Numerical features are standardized to ensure consistent scaling across variables.
+## Scope and evidence for job applications
 
-### 2.3 Model Training
+Supported by the current C++ additions:
+- Standard 11-bit classic-CAN frame parsing and validation from synthetic CSV traces
+- Seeded regression fixtures and input-defect checks
+- Clang Static Analyzer integration and C++17 compilation configuration
 
-The Prophet model is trained on the preprocessed dataset. Prophet is an additive regression model that incorporates seasonality and trend components. The model automatically detects changes in trends and incorporates seasonality using Fourier series and dummy variables.
+Not demonstrated here: automotive DBC parsing, extended CAN identifiers, CAN FD, live ECU communication, CANoe/dSPACE integration, real-vehicle anomalies, detection accuracy or safety certification.
 
-## 3. Evaluation
-
-A comprehensive evaluation of the model's performance is conducted using various metrics, visualizations, and statistical tests:
-
-### 3.1 Metrics
-
-The following metrics are calculated to assess the accuracy of the predictions:
-
-* Mean Absolute Error (MAE)
-* Root Mean Squared Error (RMSE)
-* R-squared (R2)
-* Mean Absolute Percentage Error (MAPE)
-* Explained Variance Score
-* Median Absolute Error (MedAE)
-* Mean Squared Log Error (MSLE)
-
-### 3.2 Visualizations
-
-Visualizations are employed to gain insights into the model's behavior and the accuracy of the predictions:
-
-* Actual vs. Predicted values
-* Residuals plot
-* Histogram of residuals
-* ACF and PACF plots of residuals
-* Q-Q plot of residuals
-
-### 3.3 Statistical Tests
-
-Statistical tests are conducted to analyze the residuals and assess the model's assumptions:
-
-* Shapiro-Wilk test for normality of residuals
-* Box-Cox transformation to address non-normality
-* Augmented Dickey-Fuller (ADF) test for stationarity
-* Kwiatkowski-Phillips-Schmidt-Shin (KPSS) test for stationarity
-
-## 4. Results and Discussion
-
-The results of the evaluation are presented and discussed, highlighting the model's strengths and weaknesses. The analysis of the residuals and the statistical tests provide insights into potential areas for model improvement.
-
-## 5. Conclusion
-
-This study demonstrates the effectiveness of the Prophet model in forecasting public transport demand. The feature engineering techniques and the comprehensive evaluation framework contribute to a robust and reliable prediction model. Future work may involve exploring additional features, experimenting with other forecasting models, and deploying the model for real-time predictions.
-
-## 6. References
-
-* Prophet: https://facebook.github.io/prophet/
-* Hourly Public Transport Demand Dataset: [[Kaggle Dataset Link]](https://www.kaggle.com/datasets/serdargundogdu/municipality-bus-utilization/code)
-
-## 7. Code and Reproducibility
-
-The code for this project is available on GitHub: [[GitHub Repository Link]](https://github.com/pavan1609/Safety-Critical-Automotive-CAN-Anomaly-Detection/tree/main)
-
-The repository includes detailed instructions on how to reproduce the results and conduct further experiments.
+**History note:** The C++ validator and tests were added later as a portfolio engineering exercise. The separate professional CAN-bus and HIL experience in the CV should be supported through your L&T employment, not attributed to this repository's historical code.
