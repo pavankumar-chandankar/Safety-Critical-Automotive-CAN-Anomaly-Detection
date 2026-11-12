@@ -65,7 +65,7 @@ std::string json_escape(const std::string& s) {
 void metrics(std::ostream& o,const Counts& c) {
   const double tp=static_cast<double>(c.tp),fp=static_cast<double>(c.fp);
   const double tn=static_cast<double>(c.tn),fn=static_cast<double>(c.fn);
-  auto div=[](double a,double b){return b? a/b : 0.0;};
+  auto div=[](double a,double b){return b>0.0 ? a/b : 0.0;};
   o<<"{\"tp\":"<<c.tp<<",\"fp\":"<<c.fp<<",\"tn\":"<<c.tn<<",\"fn\":"<<c.fn
    <<",\"precision\":"<<div(tp,tp+fp)<<",\"recall\":"<<div(tp,tp+fn)
    <<",\"f1\":"<<div(2*tp,2*tp+fp+fn)<<",\"fpr\":"<<div(fp,fp+tn)<<"}";
