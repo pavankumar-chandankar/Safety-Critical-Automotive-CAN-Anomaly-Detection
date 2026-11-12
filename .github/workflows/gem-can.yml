@@ -1,0 +1,39 @@
+name: GEM-CAN public-recording evaluation
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'src/gem.cpp'
+      - 'include/cansec/gem.hpp'
+      - 'app/gem_benchmark.cpp'
+      - 'scripts/download_gem_can.py'
+      - 'scripts/run_gem_benchmark.py'
+      - '.github/workflows/gem-can.yml'
+permissions:
+  contents: read
+jobs:
+  evaluate-real-vehicle-traffic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build C++17 analyzer
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel 2
+          ctest --test-dir build --output-on-failure
+      - name: Download researchers' public GEM-CAN archive and verify published MD5
+        run: python3 scripts/download_gem_can.py
+      - name: Evaluate real recorded normal and attack sessions
+        run: python3 scripts/run_gem_benchmark.py
+      - name: Summarize real-data metrics
+        run: |
+          cat artifacts/gem_can/report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gem-can-run-metrics
+          path: |
+            artifacts/gem_can/metrics.json
+            artifacts/gem_can/report.md
+            data/gem_can/provenance.json
+          retention-days: 14

@@ -1,12 +1,14 @@
-# Changelog
+# Changes
 
-## 1.0.0 — 2026-11-07 (in development)
+## November 2026 — GEM-CAN evaluation
 
-- New C++17 CAN Sentinel reference architecture and native CMake/CTest toolchain.
-- Normalized CAN/CAN FD parsing, strict Linux candump subset converter and signal decoding.
-- Policy-driven offline trace checks, seeded fault generator, replay injections and evidence JSON.
-- C++ unit suite, executable-level tests, synthetic oracle, Clang Static Analyzer, quarantined source-defect checks, sanitizer and fuzz harnesses.
-- Source docs and CI for GCC/Clang, sanitizer, static analysis, coverage, packaging and scheduled fuzz smoke.
-- Original unrelated Python experiments retained separately for provenance.
+- Added a C++17 importer for the authors' published GEM-CAN CSV schema.
+- Built a normal-traffic anomaly baseline and independent-session performance reporting.
+- Added a version-pinned dataset downloader with archive and per-file integrity checks.
+- Added real-recording evaluation workflow, parser tests, and a dedicated methodology document.
+- Retained the existing CAN/CAN FD protocol engine and source-analysis test suite.
 
-No real-vehicle detection or certification claim is implied by this release.
+## Earlier engineering work
+
+- Implemented protocol-aware message parsing, signal extraction, message rules and JSON findings.
+- Added CMake/CTest, Clang Static Analyzer, ASan/UBSan, libFuzzer and fault-regression checks.

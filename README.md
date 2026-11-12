@@ -1,129 +1,82 @@
-# CAN Sentinel — Automotive CAN/CAN FD Static Analysis & Defect Detection
+# CAN Sentinel
 
-**C++17 automotive software-quality and offline CAN-bus trace analysis research platform.** A reproducible reference implementation integrating protocol-aware parsing, DBC-inspired signal interpretation, deterministic fault injection, Clang Static Analyzer, sanitizer testing, seed-driven regression campaigns, and security-oriented verification.
+C++17 tools for inspecting CAN traffic, checking message integrity, and evaluating lightweight intrusion detection on recorded vehicle networks.
 
-![C++17](https://img.shields.io/badge/C%2B%2B-17-blue) ![CMake](https://img.shields.io/badge/build-CMake%20%2B%20CTest-informational) ![Scope](https://img.shields.io/badge/data-synthetic%20validation-orange)
+The project has two parts. The first is a protocol and software-quality toolkit: strict CAN/CAN FD parsing, configurable message rules, signal decoding, CMake-based tests, Clang static analysis, sanitizers and parser fuzzing. The second is an **evaluation pipeline for a public real-vehicle dataset**, using a normal-driving capture to establish a baseline and a separate attack capture to assess false alerts and attack detection.
 
-**Development status:** implemented and locally tested. This is a software engineering demonstration, **not** a production ECU security component, an ISO 26262 / ISO/SAE 21434 certified system, OEM DBC parser, or proof of real-world attack detection. Illustrative signal definitions, rule thresholds, and checksums are NOT authentic OEM behavior. No vehicle was connected and no commands are transmitted on a CAN bus.
+[Real-data methodology](docs/gem_can_evaluation.md) · [C++ source](src/) · [Static analysis](docs/static_analysis.md) · [GitHub Actions](.github/workflows/ci.yml)
 
-## Engineering objectives
+## Recorded traffic: GEM-CAN
 
-1. Validate malformed, inconsistent, truncated and semantically impossible CAN/CAN FD trace records before any detector logic sees them.
-2. Decode signed/unsigned, Motorola/Intel bitfields without undefined shifts or unbounded payload access.
-3. Detect *policy violations* that could represent communication defects: unknown IDs, message-rate anomalies, wrong buses, rolling-counter skips, simple checksum mismatches, abnormal payload lengths, out-of-range decoded signals, unexpected FD frames.
-4. Make source-code quality checks and intentionally seeded defect reproduction **first-class** via compiler warnings, Clang Static Analyzer, clang-tidy, cppcheck, ASan/UBSan, CI artifacts and libFuzzer harnesses.
-5. Produce stable machine-readable findings (JSON) with evidence line numbers, fault taxonomies and failure exit codes for continuous integration.
-6. Document enough methodology to withstand technical review, while keeping *measured synthetic success* distinct from actual vehicle efficacy.
+The primary dataset is **GEM-CAN**, released by Mahsa Tavasoli and colleagues in 2026. CAN messages were captured on an autonomous GEM e6 electric vehicle using PCAN equipment under normal operation and controlled attack scenarios. The public release includes approximately **100,000 normal-driving frames** and **43,443 frames from an attack session**, with labeled DoS, brake-tampering and steering-tampering traffic.
 
-## System at a glance
+Source: [GEM-CAN v3 on Zenodo](https://doi.org/10.5281/zenodo.19161139) and the [data paper](https://doi.org/10.1016/j.dib.2026.112805). The dataset is the work of its authors, not recordings collected by this repository's maintainer. **The published archive is CC BY-NC 3.0**; raw data are not repackaged in this source tree.
 
-```text
-Linux candump log ----[strict C++ converter]----+
-                                               |
-Normalized CSV (timestamp / CAN / CAN FD) ------+---[validate contract]----[typed frame]
-                                                                        |
-                    +---------------------------+----------------------------+
-                    |                           |                            |
-            [message rule pack]          [signal dictionary]             [frame history]
-                    |                           |                            |
-                    +----------[protocol + semantic checks]-----------------+
-                                               |
-                                     [severity-coded findings]
-                                               |
-                                 [JSON / text + CI exit status]
+### Reproduce the C++ benchmark
 
-C++ implementation --- Clang SA / clang-tidy / cppcheck --- source diagnostics
-         |--- ASan / UBSan --- memory and undefined-behavior checks
-         |--- libFuzzer --- CSV and candump fuzz harnesses
-         +--- CTest / 100 native test cases / CLI integration / fault campaign
-```
-
-## Quick start (Linux/macOS with C++17 compiler, CMake, Python 3)
+Requirements: CMake 3.16+, a C++17 compiler, Python 3. No Python ML framework is required to fit the baseline.
 
 ```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-cmake --build build -j 2
+git clone https://github.com/pavankumar-chandankar/Safety-Critical-Automotive-CAN-Anomaly-Detection.git
+cd Safety-Critical-Automotive-CAN-Anomaly-Detection
+
+# Download a version-pinned archive from the authors' Zenodo record and verify its checksum.
+python3 scripts/download_gem_can.py
+
+# Compile the CAN library, real-data evaluator and regression suite.
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure
 
-./build/cansec analyze \
-  --trace fixtures/nominal.csv \
-  --rules config/rules.csv \
-  --signals config/signals.csv \
-  --output report.json
-
-python3 scripts/evaluate_fault_campaign.py --binary ./build/cansec --output artifacts/fault_campaign.json
+# Fit on the independent normal-driving file and evaluate the attack session.
+python3 scripts/run_gem_benchmark.py
+cat artifacts/gem_can/report.md
 ```
 
-Expected for the committed **synthetic** `nominal.csv`: 200 frames, 0 findings, 0 parse errors. The synthetic oracle validates nine named scenarios, including the unmodified nominal case. Detection performance on real vehicles is **unknown**.
+If you downloaded the ZIP manually, use `python3 scripts/download_gem_can.py --archive /path/to/GEM_CAN_Dataset_R2.zip`. The import checks its published MD5 and records SHA-256 fingerprints of the extracted CSVs.
 
-### Introduce a seeded CAN trace defect
+The evaluator writes `metrics.json`, `report.md`, and a per-frame `predictions.csv` to `artifacts/gem_can/`. The [optional GitHub Actions benchmark](.github/workflows/gem-can.yml) runs the same test against the original Zenodo archive. Results are generated from that run; the project does not ship invented accuracy or recall figures.
+
+### Detection method
+
+The benchmark does not use attack labels for fitting. It sorts each recording by timestamp and divides the normal recording chronologically into **60% profile fitting, 20% threshold calibration, and 20% holdout**. Only after that does it score the independent attack session.
+
+The profile uses per-identifier timing, observed DLC values, payload-byte distributions and previously seen CAN IDs. Calibration selects an anomaly threshold against nominal traffic, then reports a confusion matrix and per-attack-category recall. This is a transparent C++ heuristic baseline, not a model trained to recognize every vehicle attack. The evaluation also reports false positives on held-out normal driving and benign frames inside the attack capture.
+
+**Reading the results:** DoS dominates the attack dataset by frame count. An apparently strong overall score could still hide poor brake/steering detection. Moreover, the baseline and attack recordings have different operating conditions. Both issues are discussed in the [evaluation protocol](docs/gem_can_evaluation.md).
+
+## CAN protocol and defect checks
+
+`cansec` is a separate C++17 command-line tool for offline message and source-quality checks:
 
 ```bash
-python3 scripts/generate_fixtures.py --fault counter-jump --seed 42 --output artifacts/bad_counter.csv
-./build/cansec analyze --trace artifacts/bad_counter.csv --rules config/rules.csv \
-  --signals config/signals.csv --fail-on-finding --format text
-# Returns 3 when a semantic finding is reported; malformed input/configuration returns 2.
+./build/cansec analyze --trace fixtures/nominal.csv --rules config/rules.csv \
+  --signals config/signals.csv --output artifacts/checks.json
+
+./build/cansec convert --input fixtures/candump_sample.log \
+  --output artifacts/converted.csv
 ```
 
-### Convert a supported subset of `candump` trace logs
+The rule engine supports Classical CAN and CAN FD, standard and extended identifiers, basic Intel/Motorola signal fields, configurable message periods, counters, payload checks and error reporting. Rule packs in `config/` are **illustrative**, not confidential or verified OEM definitions; the GEM-CAN benchmark deliberately learns its own profile instead of applying those rules as vehicle specifications.
+
+The small committed traces in `fixtures/` are deterministic regression inputs for the parser and rules, **not the basis for the reported vehicle benchmark**. Real-recording evaluation uses the dataset above.
+
+## Static analysis and source quality
+
+The software-quality workflow is implemented around Clang and CMake:
 
 ```bash
-./build/cansec convert --input fixtures/candump_sample.log --output artifacts/converted.csv
-./build/cansec analyze --trace artifacts/converted.csv --rules config/rules.csv
-```
-
-The converter accepts `(seconds.microseconds) can0 123#AABB` and CAN FD `##0`/`##1` flags. It is intentionally **strict and partial**; CAN FD ESI flags, nonstandard log headers, virtual channels beyond `can15`, truncated payloads and extended candump syntaxes are not silently accepted. See [Data contract](docs/data_contract.md).
-
-## Repository design
-
-| Directory | Role |
-|---|---|
-| `include/cansec/`, `src/` | C++17 core library (frames, CSV/candump parsers, Intel/Motorola signals, policy validation, reporting, fault injection) |
-| `app/main.cpp` | Pure C++ command-line program (`analyze`, `convert`) |
-| `config/` | Example policy pack and DBC-inspired signal dictionary; **illustrative only** |
-| `tests/` | Native C++ unit tests and executable-level Python regression tests |
-| `fixtures/` | Seeded synthetic nominal/fault traces and candump sample |
-| `defects/seeded/` | Isolated intentionally buggy C++ source for static-analyzer sensitivity checks |
-| `defects/fuzz/` | libFuzzer entry points for both parsers |
-| `benchmarks/` | Synthetic throughput microbenchmark with no external dataset |
-| `scripts/` | Sanitizers, coverage, static-analysis, fixture generation, fault-oracle evaluation |
-| `.github/workflows/` | GCC/Clang builds, Clang SA, quality tools, sanitizer tests, coverage and scheduled fuzz smoke |
-| `docs/` | System requirements, architecture, threat model, signal semantics, verification evidence, engineering decisions |
-
-## Static-analysis workflow
-
-```bash
-bash scripts/static_analysis.sh
-bash scripts/sanitize.sh
-bash scripts/coverage.sh     # optionally use gcovr for reports
+python3 scripts/check_production_sast.py
 python3 scripts/check_seeded_defects.py
+bash scripts/sanitize.sh
 ```
 
-The source-analysis job **hard-gates** Clang Static Analyzer findings and independently verifies analyzer sensitivity on isolated null-dereference and divide-by-zero examples. `clang-tidy` and `cppcheck` run when installed; see the CI workflow for gating policies. Intentionally buggy samples are **never compiled into application targets**.
+It includes strict GCC/Clang diagnostics, Clang Static Analyzer, AddressSanitizer and UndefinedBehaviorSanitizer, plus libFuzzer entry points for parsers. Isolated intentionally defective C++ examples verify that the analysis setup can detect known classes of source-code defects; they are not compiled into the production library. The CI pipeline also builds a release artifact and runs CTest.
 
-Optional Clang libFuzzer (typically Linux with LLVM/Clang runtime):
+The source tree is organized as `include/cansec/` and `src/` (library), `app/` (tools), `tests/` (regression tests), `scripts/` (evaluation and analysis), `docs/` (design), and `.github/workflows/` (automation). A separate `legacy/` folder preserves early exploratory scripts without mixing them into the active build.
 
-```bash
-cmake -S . -B build-fuzz -DCMAKE_CXX_COMPILER=clang++ \
-  -DCANSEC_BUILD_FUZZERS=ON -DCANSEC_BUILD_TESTS=OFF
-cmake --build build-fuzz
-./build-fuzz/fuzz_trace -seed=42 -runs=2000
-./build-fuzz/fuzz_candump -seed=42 -runs=2000
-```
+## Scope
 
-## Key design constraints and limitations
+CAN Sentinel is an **offline engineering and research tool**. It reads files and does not transmit CAN frames. The baseline is built for the published GEM-CAN recording format; it has not been validated across production vehicle fleets and has no ISO 26262 / ISO/SAE 21434 certification. It is not a replacement for an OEM DBC, an ECU safety case, or a HIL validation campaign.
 
-- **Offline only:** no live SocketCAN adapter, no frames transmitted, no J1939 transport reassembly, no ISO-TP, no diagnosis/service scanning, no OEM DBC file redistribution.
-- **Signal catalog:** small, explicitly documented DBC-inspired CSV subset, **not** full Vector DBC grammar (e.g. multiplexing, value tables, cyclic attributes and containers unsupported).
-- **Checksum:** illustrative SUM8 (sum of other bytes modulo 256), not a proven OEM checksum/CRC; per-ID semantics are configured and require manufacturer-specific verification.
-- **Timing:** heuristic policy limits, not statistically trained detectors; high load, bus scheduling, multi-bus clocks and capture jitter can cause false positives.
-- **Research validity:** synthetic fixture self-tests establish code behavior, not recall/precision on unseen real attacks. No HIL/CANoe/dSPACE, functional safety certification or physical vehicle tests are claimed here.
-- **Legacy history:** earlier unrelated Prophet/Python snippets remain recoverable under Git history / `legacy/` for transparency; they are not part of this C++ architecture.
-
-## Documentation
-
-Read [System architecture](docs/architecture.md), [Requirements & traceability](docs/requirements_traceability.md), [Data contract](docs/data_contract.md), [Protocol & signal semantics](docs/signal_decoding.md), [Static-analysis methodology](docs/static_analysis.md), [Fault injection](docs/fault_injection.md), [Threat model](docs/threat_model.md), [Verification](docs/verification.md), [Research protocol](docs/research_protocol.md), [Limitations](docs/limitations.md), and [Engineering decisions](docs/decisions.md).
-
-## License & attribution
-
-The existing repository `LICENSE` is retained; check its terms before any downstream redistribution. This is original educational/research engineering work added to the user's repository. References to CAN/CAN FD specifications, source analyzers, Linux can-utils and software quality standards are informative, **not endorsements or conformance attestations**.
+The original dataset and data paper should be cited in any report using the benchmark. Details of the data license, preprocessing, split design, metrics and threats to validity are in [docs/gem_can_evaluation.md](docs/gem_can_evaluation.md).

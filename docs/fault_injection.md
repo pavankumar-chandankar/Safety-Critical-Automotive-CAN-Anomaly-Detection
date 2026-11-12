@@ -20,7 +20,7 @@ Run:
 python3 scripts/evaluate_fault_campaign.py --binary ./build/cansec --seed 42 --cycles 40 --output artifacts/fault_campaign.json
 ```
 
-**Interpretation:** `oracle_passed` counts whether each designed perturbation caused its expected code, not true positive rate in the scientific sense. Some perturbations also disrupt scheduling or other downstream counters, creating *additional legitimate secondary findings*; only the stated code is mandatory. Do not report the campaign result as `100% attack detection accuracy` in a CV or paper.
+**Interpretation:** `oracle_passed` counts whether each designed perturbation caused its expected code, not true positive rate in the scientific sense. Some perturbations also disrupt scheduling or other downstream counters, creating *additional legitimate secondary findings*; only the stated code is mandatory. Do not treat passing these controlled regression cases as accuracy measured on independent vehicle recordings; the GEM-CAN benchmark provides that separate evaluation.
 
 ## Future scientific evaluation plan
 

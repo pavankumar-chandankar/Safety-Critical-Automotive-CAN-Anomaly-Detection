@@ -19,9 +19,9 @@ jobs:
         run: cmake -S . -B build -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DCMAKE_BUILD_TYPE=Debug -DCANSEC_WARNINGS_AS_ERRORS=ON
       - name: Build
         run: cmake --build build --parallel 2
-      - name: Native + CLI + seeded detection campaign
+      - name: Native protocol tests, CLI checks, and regression fixtures
         run: ctest --test-dir build --output-on-failure
-      - name: Benchmark smoke (synthetic only)
+      - name: Deterministic C++ microbenchmark smoke
         run: ./build/cansec_bench 10000
   sanitizers:
     runs-on: ubuntu-24.04

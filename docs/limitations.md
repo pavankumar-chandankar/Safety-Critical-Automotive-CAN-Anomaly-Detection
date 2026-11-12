@@ -1,24 +1,12 @@
-# Limitations and honest project claims
+# Limitations
 
-## Supported
+The C++17 toolchain makes it possible to reproduce a basic CAN intrusion benchmark on the public GEM-CAN recordings. The dataset is real, but one dataset is not sufficient to establish that the detector would behave reliably on another vehicle or network configuration.
 
-- C++17 typed-frame processing, classic CAN and CAN FD DLC semantics, standard/extended IDs, bounded CSV parser, subset of candump ASCII conversion.
-- DBC-inspired Intel/Motorola signal extraction and physical range checks (not a complete DBC parser).
-- Rule-based offline communication anomaly *checks* (not validated intrusion detection).
-- Testable rolling counters and illustrative SUM8 check, timing bounds, burst/missing-heartbeat heuristics, structured diagnostics.
-- Clang Static Analyzer, compiler diagnostics, seeded source defects, sanitizer builds, fuzz harnesses, coverage support, CI configuration, deterministic synthetic oracle.
+- The original normal-driving capture and attack session were collected under different operating conditions. Apparent novelty may reflect that difference rather than malicious behavior.
+- The baseline uses heuristic feature weights, with the threshold calibrated on nominal traffic only. It is neither a supervised classifier nor a formally verified intrusion detector.
+- The dataset is heavily imbalanced toward DoS. Per-class recall and normal false-positive rates are essential context.
+- The protocol rule packs are examples and do not establish OEM message semantics, proprietary checksum algorithms, or full DBC coverage.
+- Static analyzers, fuzzing and sanitizers help find software defects. Passing them cannot certify a safety-critical embedded system.
+- No physical ECU communication, vehicle network injection, CANoe/dSPACE HIL bench, or production deployment is included.
 
-## Not supported
-
-- Real CAN bus ingestion/transmission (SocketCAN, PCAN, VN/VX), CANoe interaction, dSPACE HIL, real-time ECU software, live automotive cybersecurity monitoring.
-- Complete DBC import/export, UDS or ISO-TP, J1939 multi-packet transport, authenticated CAN, SecOC, AUTOSAR compliant stack.
-- Proprietary OEM checksums, trained ML models, per-vehicle tuning, false-positive rate on real operational captures, real-attack precision/recall.
-- Formal verification, certification, ISO 26262 compliance, ASIL designation, ISO/SAE 21434 compliance claim, MISRA conformance claim.
-
-## How to represent it in a CV
-
-Good: "Built a C++17 offline CAN/CAN FD validation and defect-detection framework with protocol-aware parsing, Intel/Motorola signal decoding, configurable anomaly rules, deterministic fault injection, and Clang Static Analyzer / ASan / UBSan / libFuzzer / CTest CI workflows. Verified seeded scenarios and regression tests."
-
-Do not claim: "Deployed safety-critical CAN IDS on production vehicles", "certified to ISO 26262", "100% accurate automotive intrusion detection", "developed OEM DBC parser", or "validated in dSPACE/CANoe", unless those were actually established through separate evidence.
-
-Note: This project was built as a later portfolio engineering exercise. It should not be described as being completed at L&T unless it genuinely occurred there.
+The real-data benchmark's CSV loader, calibration, metrics and provenance checks are described in [gem_can_evaluation.md](gem_can_evaluation.md).

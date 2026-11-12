@@ -2,7 +2,7 @@
 
 ## Context and system boundaries
 
-`CAN Sentinel` is a deterministic offline software analysis pipeline. Input assets are untrusted normalized trace CSV or selected Linux can-utils candump ASCII lines. It does not read a vehicle bus or control actuators. Policy files are likewise untrusted input and must pass independent validation. The executable emits a trace summary and diagnostic catalog without persisting raw payloads in the output. Its model is a *policy and rule engine*, not a learned anomaly detector.
+`CAN Sentinel` is a deterministic offline software analysis pipeline. Input assets are untrusted normalized trace CSV or selected Linux can-utils candump ASCII lines. It does not read a vehicle bus or control actuators. Policy files are likewise untrusted input and must pass independent validation. The executable emits a trace summary and diagnostic catalog without persisting raw payloads in the output. The `cansec` executable implements configurable protocol checks. A separate `cansec_gem` tool builds a lightweight traffic profile from the real GEM-CAN normal-driving recording and evaluates that profile on a different labeled attack session.
 
 ## Logical components
 
@@ -14,7 +14,8 @@
 6. **Analysis state machine** (`engine.cpp`): keyed by `(bus, format, identifier)` for timing/counter state, with global timestamp monotonicity check, capped detail retention and unlimited total aggregated counts within bounded total frames.
 7. **Evidence/reporting** (`report.cpp`): stable JSON version 1 and readable text, no raw capture data or potentially private vehicle information by default.
 8. **Fault injection** (`replay.cpp`, generator): deterministic, explicit contamination of synthetic frame sequences; never target a real ECU or live bus.
-9. **Verification**: unit, CLI, seeded oracles, static analysis, sanitizer builds, fuzzer entry points, release build and performance smoke.
+9. **Real-recording benchmark** (`gem.cpp`, `gem_benchmark.cpp`): validated GEM-CAN CSV import, chronological baseline fitting, calibration, held-out benign assessment, separate attack-session scoring and per-class metrics. The original raw recordings remain external to this repository.
+10. **Verification**: unit, CLI, seeded oracles, static analysis, sanitizer builds, fuzzer entry points, release build and performance smoke.
 
 ## Design invariants
 

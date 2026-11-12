@@ -12,3 +12,5 @@ __pycache__/
 *.out
 *.sarif
 .DS_Store
+# Downloaded third-party vehicle recordings and derived predictions
+data/

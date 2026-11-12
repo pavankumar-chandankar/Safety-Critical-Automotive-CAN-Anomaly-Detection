@@ -16,6 +16,8 @@ cmake --build build-fuzz
 
 Tests cover the exact input contract, DLC edge mapping, mixed endian fields, signed extreme values, overlapping field rejection, rule sanity, counter wraparound, trigger codes, retention limits, JSON string escaping, strict candump conversion and deterministic fault mutation.
 
+The **GEM-CAN benchmark** is evaluated separately from the deterministic protocol regression suite. To run it, use `scripts/download_gem_can.py` followed by `scripts/run_gem_benchmark.py`. That workflow loads the source authors' real vehicle recordings, writes frame-level metrics and checks each source CSV against recorded SHA-256 hashes.
+
 ## Pass criteria
 
 1. All C++ registrations and CLI tests pass on GCC and Clang.

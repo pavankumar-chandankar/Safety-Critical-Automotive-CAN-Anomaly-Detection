@@ -1,29 +1,17 @@
-# Architecture decision records
+# Design decisions
 
-## ADR-001 — C++17 and zero runtime third-party dependencies
+## Keep the detector offline
 
-**Decision:** C++17 core and standard library containers, CMake as build system. **Reason:** portable offline validation with transparent memory and numeric semantics, easy compilation with several toolchains. **Tradeoff:** no full DBC library, no heavyweight JSON schema dependency, no CAN driver adapters.
+The project reads captured traces rather than transmitting frames or connecting to a vehicle bus. This keeps testing repeatable and avoids mixing validation research with vehicle modification.
 
-## ADR-002 — explicit normalized capture contract
+## Separate message rules from learned profiles
 
-**Decision:** strict CSV with exactly nine fields; subset candump converter. **Reason:** avoiding silent misinterpretation of ambiguous capture variants is more important than permissive parsing in a defect test tool. **Tradeoff:** legitimate vendor formats need declared adapters.
+The original CAN protocol checks validate frame structure and configured signal semantics. The GEM-CAN evaluator instead learns identifiers, DLC patterns, bytes and message timing from the dataset's normal-driving capture. It does not silently assume that example signal definitions correspond to the GEM vehicle.
 
-## ADR-003 — synthetic oracle not real-world accuracy
+## Use independent sessions for evaluation
 
-**Decision:** seeded faults are designed fixtures with explicit code expectations; no precision/recall claim. **Reason:** no authorized labeled real-vehicle dataset or universal OEM message definitions are available.
+The normal-driving recording is the sole source of fitting and threshold calibration. The attack capture is never mixed into a random row-level split. Separate recordings reduce direct leakage, although operating-condition shifts remain a problem to evaluate explicitly.
 
-## ADR-004 — Clang SA, seeded examples, fuzz, sanitizers as separate instruments
+## Keep source-code defect analysis distinct from intrusion detection
 
-**Decision:** source-level analysis, runtime sanitizers and offline fault detection have separate test targets and artifacts. **Reason:** a trace heuristic never proves that C++ memory code is safe, and static analysis never proves an ECU attack was detected.
-
-## ADR-005 — rule packs as versioned configuration
-
-**Decision:** machine-readable CSV policies with validators and non-overlapping signal footprints. **Reason:** testability and auditability; separate implementation defects from semantic modeling mistakes.
-
-## ADR-006 — fail closed for unsupported protocols
-
-**Decision:** reject CAN FD ESI flags in candump converter, nonrepresentable DLC lengths, invalid RTR/FD combinations, unsupported ID widths and ambiguous bitfields. **Reason:** never silently transform unknown source input into apparently valid evidence.
-
-## ADR-007 — sensitive data minimization
-
-**Decision:** default diagnostics include frame ID, line, time, code and explanation, not raw signal payload bytes. **Reason:** CAN traces may reveal operational patterns; tests use synthetic fixtures. **Limitation:** metadata itself can still be sensitive.
+Clang Static Analyzer and sanitizers find defects in C++ software. They cannot label a CAN frame as malicious. Conversely, an anomaly score on a public dataset does not prove that the C++ code is free of memory or logic defects. CI evaluates the two concerns independently.
