@@ -30,6 +30,7 @@ std::optional<std::uint64_t> parse_unsigned(const std::string& text, int base) n
   try {
     std::size_t pos = 0;
     const int actual_base = base == 0 ? (cleaned.size() > 2U && cleaned[0] == '0' && (cleaned[1] == 'x' || cleaned[1] == 'X') ? 16 : 10) : base;
+    if (actual_base < 2 || actual_base > 36) return std::nullopt;
     const auto result = std::stoull(cleaned, &pos, actual_base);
     if (pos != cleaned.size()) return std::nullopt;
     return static_cast<std::uint64_t>(result);
