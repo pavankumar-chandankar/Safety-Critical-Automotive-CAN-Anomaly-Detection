@@ -35,7 +35,25 @@ cat artifacts/gem_can/report.md
 
 If you downloaded the ZIP manually, use `python3 scripts/download_gem_can.py --archive /path/to/GEM_CAN_Dataset_R2.zip`. The import checks its published MD5 and records SHA-256 fingerprints of the extracted CSVs.
 
-The evaluator writes `metrics.json`, `report.md`, and a per-frame `predictions.csv` to `artifacts/gem_can/`. The [optional GitHub Actions benchmark](.github/workflows/gem-can.yml) runs the same test against the original Zenodo archive. Results are generated from that run; the project does not ship invented accuracy or recall figures.
+The evaluator writes `metrics.json`, `report.md`, and a per-frame `predictions.csv` to `artifacts/gem_can/`. The [GitHub Actions benchmark](.github/workflows/gem-can.yml) runs the same test against the original Zenodo archive and uploads measured metrics and dataset provenance.
+
+### Recorded-data baseline results
+
+The [first verified end-to-end run](https://github.com/pavankumar-chandankar/Safety-Critical-Automotive-CAN-Anomaly-Detection/actions/runs/43241363927) used the authors' version-pinned archive and produced the following frame-level measurements:
+
+| Evaluation | Measurement |
+| --- | ---: |
+| Normal-driving frames used for fitting | 60,000 |
+| Normal calibration / held-out normal frames | 20,000 / 20,000 |
+| Normal holdout false-positive rate | 0.76% |
+| Attack-session frames | 43,444 |
+| Overall precision / recall / F1 (attack session) | 98.98% / 96.88% / 97.92% |
+| DoS recall (41,080 frames) | 100% |
+| Brake tampering recall (663 frames) | 0.15% |
+| Steering tampering recall (662 frames) | 0% |
+| False-positive rate among benign attack-session frames | 40.90% |
+
+**Interpretation:** This is a deliberately transparent baseline, **not a strong general-purpose intrusion detector**. Almost all true positives come from DoS flooding. The legitimate-ID brake and steering tampering remain largely undetected, while normal traffic in the separate attack recording shifts substantially from the normal-driving baseline. The weak per-class results are just as important as the high aggregate F1. The [measured-results note](docs/gem_can_results.md) gives the confusion counts, provenance and limitations.
 
 ### Detection method
 
